@@ -19,48 +19,39 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git zip unzip python3-pip openjdk-11-jdk wget
+        sudo apt-get install -y git zip unzip python3-pip openjdk-17-jdk wget
     
     - name: Install Buildozer
       run: |
         pip install --upgrade pip
-        pip install buildozer cython==0.29.36 kivy==2.2.1
+        pip install buildozer cython==0.29.36 kivy==2.1.0  # 👈 2.2.1 YERİNE 2.1.0
     
-    - name: Create FIXED buildozer.spec
+    - name: Create buildozer.spec
       run: |
-        echo '[app]' > buildozer.spec
-        echo 'title = Orifis' >> buildozer.spec
-        echo 'package.name = orifisapp' >> buildozer.spec
-        echo 'package.domain = org.lutfi' >> buildozer.spec
-        echo 'source.dir = .' >> buildozer.spec
-        echo 'source.include_exts = py,json' >> buildozer.spec
-        echo 'version = 1.0' >> buildozer.spec
-        echo 'requirements = python3,kivy==2.2.1' >> buildozer.spec
-        echo 'orientation = portrait' >> buildozer.spec
-        echo 'android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE' >> buildozer.spec
-        echo 'android.api = 33' >> buildozer.spec  # 👈 GÜNCEL API
-        echo 'android.minapi = 21' >> buildozer.spec
-        echo 'android.sdk = 33' >> buildozer.spec  # 👈 GÜNCEL SDK
-        echo 'android.ndk = 25b' >> buildozer.spec  # 👈 NDK 25b YAP!
-        echo 'android.archs = armeabi-v7a' >> buildozer.spec
-        echo 'android.accept_sdk_license = True' >> buildozer.spec
-        echo 'log_level = 2' >> buildozer.spec
+        cat > buildozer.spec << 'EOF'
+[app]
+title = Orifis
+package.name = orifisapp
+package.domain = org.lutfi
+source.dir = .
+source.include_exts = py,json
+version = 1.0
+requirements = python3,kivy==2.1.0
+orientation = portrait
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+android.api = 30
+android.minapi = 21
+android.sdk = 30
+android.ndk = 23b
+android.archs = armeabi-v7a
+android.accept_sdk_license = True
+log_level = 2
+EOF
     
-    - name: Clean buildozer cache
+    - name: Clean cache
       run: |
-        rm -rf .buildozer
-        rm -rf ~/.buildozer
-    
-    - name: Download NDK 25b manually
-      run: |
-        # NDK 25b'i manuel indir
-        wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-        mkdir -p ~/.buildozer/android/platform
-        unzip -q android-ndk-r25b-linux.zip -d ~/.buildozer/android/platform/
-        mv ~/.buildozer/android/platform/android-ndk-r25b ~/.buildozer/android/platform/android-ndk-r25b
-        echo "NDK 25b downloaded"
+        rm -rf .buildozer ~/.buildozer 2>/dev/null || true
     
     - name: Build APK
       run: |
-        # Build et
         buildozer -v android debug
