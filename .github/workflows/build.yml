@@ -17,93 +17,54 @@ jobs:
       with:
         python-version: '3.9'
 
-    - name: Install System Dependencies
+    - name: Install Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           git zip unzip python3-pip \
           openjdk-17-jdk \
-          wget curl \
-          autoconf automake libtool \
-          pkg-config zlib1g-dev \
-          libncurses5-dev libncursesw5-dev \
-          libtinfo5 cmake libffi-dev libssl-dev
+          wget curl
 
-    - name: Install Python Dependencies
+    - name: Install Buildozer
       run: |
         pip install --upgrade pip
         pip install buildozer cython==0.29.33
         pip install kivy==2.2.1
 
-    - name: Setup Android Environment
-      run: |
-        mkdir -p ~/.buildozer/android/platform
-        
-        # Download Android SDK Command Line Tools
-        if [ ! -d ~/.buildozer/android/platform/android-sdk ]; then
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          mkdir -p ~/.buildozer/android/platform/android-sdk
-          unzip -q commandlinetools-linux-9477386_latest.zip -d ~/.buildozer/android/platform/android-sdk/
-          mv ~/.buildozer/android/platform/android-sdk/cmdline-tools ~/.buildozer/android/platform/android-sdk/cmdline-tools-latest
-        fi
-        
-        # Download NDK 25b
-        if [ ! -d ~/.buildozer/android/platform/android-ndk-r25b ]; then
-          wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-          unzip -q android-ndk-r25b-linux.zip
-          mv android-ndk-r25b ~/.buildozer/android/platform/
-        fi
-
-    - name: Accept Android Licenses
-      run: |
-        yes | ~/.buildozer/android/platform/android-sdk/cmdline-tools-latest/bin/sdkmanager --licenses || true
-        ~/.buildozer/android/platform/android-sdk/cmdline-tools-latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0"
-
     - name: Create buildozer.spec
       run: |
-        cat > buildozer.spec << 'EOF'
-[app]
-title = Orifis App
-package.name = orifisapp
-package.domain = org.lutfi
-source.dir = .
-source.include_exts = py,json,txt
-version = 1.0
-requirements = python3,kivy==2.2.1
-orientation = portrait
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
-android.api = 33
-android.minapi = 21
-android.sdk = 33
-android.ndk = 25b
-android.archs = armeabi-v7a
-android.accept_sdk_license = True
-android.skip_update = True
-log_level = 2
-
-[buildozer]
-log_level = 2
-warn_on_root = 0
-EOF
+        echo '[app]' > buildozer.spec
+        echo 'title = Orifis App' >> buildozer.spec
+        echo 'package.name = orifisapp' >> buildozer.spec
+        echo 'package.domain = org.lutfi' >> buildozer.spec
+        echo 'source.dir = .' >> buildozer.spec
+        echo 'source.include_exts = py,json,txt' >> buildozer.spec
+        echo 'version = 1.0' >> buildozer.spec
+        echo 'requirements = python3,kivy==2.2.1' >> buildozer.spec
+        echo 'orientation = portrait' >> buildozer.spec
+        echo 'android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE' >> buildozer.spec
+        echo 'android.api = 33' >> buildozer.spec
+        echo 'android.minapi = 21' >> buildozer.spec
+        echo 'android.sdk = 33' >> buildozer.spec
+        echo 'android.ndk = 25b' >> buildozer.spec
+        echo 'android.archs = armeabi-v7a' >> buildozer.spec
+        echo 'android.accept_sdk_license = True' >> buildozer.spec
+        echo 'log_level = 2' >> buildozer.spec
 
     - name: Build APK
       run: |
-        # Clean previous builds
-        rm -rf .buildozer bin 2>/dev/null || true
+        # Clean
+        rm -rf .buildozer bin
         
-        # Build with verbose output
-        buildozer android debug 2>&1 | tee build.log
+        # Build
+        buildozer android debug 2>&1
         
-        # Check result
+        # Check
         if ls bin/*.apk 1> /dev/null 2>&1; then
           echo "✅ APK build successful!"
           ls -lh bin/*.apk
         else
           echo "❌ APK build failed!"
-          echo "=== LAST 100 LINES OF BUILD LOG ==="
-          tail -100 build.log
-          echo "=== ERROR LINES ==="
-          grep -i "error\|fail\|exception" build.log | tail -20
           exit 1
         fi
 
