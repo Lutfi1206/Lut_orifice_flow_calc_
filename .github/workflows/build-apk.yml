@@ -7,69 +7,162 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # ✅ 22.04 kullan, 24.04'te sorun var
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.9'
         
-    - name: Install Buildozer and Dependencies
-      run: |
-        pip install buildozer
-        pip install cython
-        pip install virtualenv
-      
-    - name: Install Android SDK
+    - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           git \
           zip \
           unzip \
-          openjdk-17-jdk \
+          openjdk-11-jdk \
           python3-pip \
+          python3-venv \
           autoconf \
           libtool \
           pkg-config \
           zlib1g-dev \
           libncurses5-dev \
           libncursesw5-dev \
-          libtinfo5 \
+          libtinfo5 \  # ✅ 22.04'te bu paket VAR
           cmake \
           libffi-dev \
           libssl-dev \
-          python3-setuptools
-      
+          wget \
+          curl
+        
+    - name: Install Buildozer and Python packages
+      run: |
+        python -m pip install --upgrade pip
+        pip install cython==0.29.36
+        pip install buildozer==1.5.0
+        pip install kivy==2.2.1
+        pip install plyer
+        
     - name: Create buildozer.spec
       run: |
-        echo '[app]
-        title = Orifis App
-        package.name = orifisapp
-        package.domain = com.orifis
-        source.dir = .
-        source.include_exts = py,png,jpg,kv,atlas,json,txt
-        version = 1.0.0
-        requirements = python3,kivy==2.3.0
-        orientation = portrait
-        android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
-        android.api = 33
-        android.minapi = 21
-        android.sdk = 33
-        android.ndk = 25b' > buildozer.spec
+        cat > buildozer.spec << 'EOF'
+[app]
+
+# App info
+title = Orifis Hesaplayıcı
+package.name = orifisapp
+package.domain = org.lutfi
+source.dir = .
+source.include_exts = py,png,jpg,kv,json,txt
+
+version = 1.0
+
+# Requirements
+requirements = python3,kivy==2.2.1
+
+# Android settings
+orientation = portrait
+fullscreen = 0
+
+# Permissions
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+
+# API levels
+android.api = 33
+android.minapi = 21
+android.sdk = 33
+android.ndk = 25b
+
+# Architectures
+android.archs = arm64-v8a, armeabi-v7a
+
+# Accept SDK license automatically
+android.accept_sdk_license = True
+
+# Log level
+log_level = 2
+EOF
+        
+    - name: Fix main.py for Android
+      run: |
+        # main.py'nin BAŞINA Android izinlerini ekle
+        cat > temp_main.py << 'EOF'
+import os
+import sys
+from pathlib import Path
+
+# Android kontrolü
+if 'ANDROID_ARGUMENT' in os.environ:
+    print("ANDROID DETECTED")
+    try:
+        from android.permissions import request_permissions, Permission
+        from android.storage import primary_external_storage_path
+        
+        # İzinleri iste
+        permissions = [Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE]
+        request_permissions(permissions)
+        
+        # Dizinleri ayarla
+        BASE_DIR = Path(primary_external_storage_path())
+        SAVE_DIR = BASE_DIR / "OrifisApp" / "orifis_kayitlar"
+        CUSTOM_GASES_FILE = SAVE_DIR / "custom_gases.json"
+        
+        print(f"Android storage: {BASE_DIR}")
+    except Exception as e:
+        print(f"Android error: {e}")
+        BASE_DIR = Path(".")
+        SAVE_DIR = BASE_DIR / "orifis_kayitlar"
+        CUSTOM_GASES_FILE = BASE_DIR / "custom_gases.json"
+else:
+    BASE_DIR = Path(".")
+    SAVE_DIR = BASE_DIR / "orifis_kayitlar"
+    CUSTOM_GASES_FILE = BASE_DIR / "custom_gases.json"
+
+# Dizinleri oluştur
+SAVE_DIR.mkdir(parents=True, exist_ok=True)
+EOF
+        
+        # Orijinal main.py'nin geri kalanını ekle
+        awk '/^GAZLAR = {/,0' main.py >> temp_main.py
+        
+        # temp_main.py'yi asıl main.py yap
+        mv temp_main.py main.py
         
     - name: Build APK
+      timeout-minutes: 90
       run: |
-        export PATH=$PATH:/home/runner/.local/bin
-        buildozer android debug 2>&1 | tail -100
-      
+        # Buildozer cache'i temizle
+        rm -rf .buildozer 2>/dev/null || true
+        
+        # APK build et
+        echo "Starting APK build..."
+        buildozer -v android debug 2>&1 | tail -200
+        
+    - name: Check APK
+      run: |
+        echo "Checking for APK..."
+        ls -la bin/ 2>/dev/null || echo "bin directory not found"
+        find . -name "*.apk" -type f 2>/dev/null || echo "No APK found"
+        
     - name: Upload APK
       if: success()
       uses: actions/upload-artifact@v4
       with:
         name: orifis-apk
         path: bin/*.apk
+        if-no-files-found: error
+        
+    - name: Upload build logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          .buildozer/
+          buildozer.spec
