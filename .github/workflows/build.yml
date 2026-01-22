@@ -76,7 +76,7 @@ android.api = 33
 android.minapi = 21
 android.sdk = 33
 android.ndk = 25b
-android.archs = armeabi-v7a,arm64-v8a
+android.archs = armeabi-v7a
 android.accept_sdk_license = True
 android.skip_update = True
 log_level = 2
@@ -95,7 +95,7 @@ EOF
         buildozer android debug 2>&1 | tee build.log
         
         # Check result
-        if [ -f bin/*.apk ]; then
+        if ls bin/*.apk 1> /dev/null 2>&1; then
           echo "✅ APK build successful!"
           ls -lh bin/*.apk
         else
