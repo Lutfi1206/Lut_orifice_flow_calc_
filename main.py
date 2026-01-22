@@ -1,21 +1,31 @@
 import os
 from pathlib import Path
+import platform
 
-# Android kontrolü
-if 'ANDROID_ARGUMENT' in os.environ:
+# Platforma göre kayıt dizinini belirle
+if platform.system() == "Android":
+    # Android için basit yol
+    BASE_DIR = Path("/storage/emulated/0/OrifisApp")
+    # Android izinlerini kontrol et
     try:
         from android.permissions import request_permissions, Permission
-        from android.storage import primary_external_storage_path
-        request_permissions([Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE])
-        BASE_DIR = Path(primary_external_storage_path())
+        request_permissions([
+            Permission.READ_EXTERNAL_STORAGE,
+            Permission.WRITE_EXTERNAL_STORAGE
+        ])
     except:
-        BASE_DIR = Path("/storage/emulated/0")
+        pass  # İzinler zaten verilmiş olabilir
 else:
     BASE_DIR = Path(".")
 
-SAVE_DIR = BASE_DIR / "OrifisApp" / "orifis_kayitlar"
-SAVE_DIR.mkdir(parents=True, exist_ok=True)
-CUSTOM_GASES_FILE = SAVE_DIR / "custom_gases.json"
+SAVE_DIR = BASE_DIR / "orifis_kayitlar"
+CUSTOM_GASES_FILE = BASE_DIR / "custom_gases.json"
+
+# Dizinleri oluştur
+try:
+    SAVE_DIR.mkdir(parents=True, exist_ok=True)
+except:
+    pass  # Dizin oluşturulamazsa geç
 import kivy
 from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
