@@ -1,38 +1,59 @@
 name: Build APK
 
 on:
-  workflow_dispatch:  # SADECE MANUEL
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 180  # 👈 3 SAAT
+    timeout-minutes: 120
     
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-python@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
       with:
         python-version: '3.9'
     
-    - name: Install minimal dependencies
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y git zip unzip python3-pip openjdk-11-jdk
     
-    - name: Install Buildozer
+    - name: Install Buildozer FRESH
       run: |
-        pip install buildozer cython kivy
-    
-    - name: Build with timeout workaround
-      run: |
-        # Önce SDK'yı manuel indir
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-        mkdir -p ~/.android/cmdline-tools
-        unzip -q commandlinetools-linux-9477386_latest.zip -d ~/.android/cmdline-tools
-        mv ~/.android/cmdline-tools/cmdline-tools ~/.android/cmdline-tools/latest
+        # Eski her şeyi temizle
+        rm -rf ~/.buildozer
+        rm -rf .buildozer
+        pip install --upgrade pip
+        pip install buildozer cython kivy==2.2.1 plyer
         
-        # Buildozer cache
-        buildozer android clean
-        timeout 1500 buildozer -v android debug || echo "Build continues..."
+    - name: Create SIMPLE buildozer.spec
+      run: |
+        cat > buildozer.spec << 'EOF'
+[app]
+title = Orifis
+package.name = orifis
+package.domain = org.lutfi
+source.dir = .
+version = 1.0
+requirements = python3,kivy==2.2.1
+orientation = portrait
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+android.api = 30
+android.minapi = 21
+android.archs = armeabi-v7a
+android.accept_sdk_license = True
+EOF
+    
+    - name: Build APK
+      run: |
+        # ÖNCE python-for-android'i manuel kur
+        git clone https://github.com/kivy/python-for-android
+        cd python-for-android
+        pip install -e .
+        cd ..
+        
+        # SONRA build et
+        buildozer -v android debug 2>&1 | tail -100
