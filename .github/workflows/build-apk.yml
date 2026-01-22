@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04  # ✅ 22.04 kullan, 24.04'te sorun var
+    runs-on: ubuntu-22.04
     
     steps:
     - name: Checkout code
@@ -34,7 +34,7 @@ jobs:
           zlib1g-dev \
           libncurses5-dev \
           libncursesw5-dev \
-          libtinfo5 \  # ✅ 22.04'te bu paket VAR
+          libtinfo5 \
           cmake \
           libffi-dev \
           libssl-dev \
