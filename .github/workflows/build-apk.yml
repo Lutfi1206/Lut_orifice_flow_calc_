@@ -51,7 +51,7 @@ jobs:
         
     - name: Create buildozer.spec
       run: |
-        cat > buildozer.spec << 'EOF'
+        cat << 'EOF' > buildozer.spec
 [app]
 
 # App info
@@ -92,7 +92,7 @@ EOF
     - name: Fix main.py for Android
       run: |
         # main.py'nin BAŞINA Android izinlerini ekle
-        cat > temp_main.py << 'EOF'
+        cat << 'EOF' > temp_main.py
 import os
 import sys
 from pathlib import Path
