@@ -1,3 +1,21 @@
+import os
+from pathlib import Path
+
+# Android kontrolü
+if 'ANDROID_ARGUMENT' in os.environ:
+    try:
+        from android.permissions import request_permissions, Permission
+        from android.storage import primary_external_storage_path
+        request_permissions([Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE])
+        BASE_DIR = Path(primary_external_storage_path())
+    except:
+        BASE_DIR = Path("/storage/emulated/0")
+else:
+    BASE_DIR = Path(".")
+
+SAVE_DIR = BASE_DIR / "OrifisApp" / "orifis_kayitlar"
+SAVE_DIR.mkdir(parents=True, exist_ok=True)
+CUSTOM_GASES_FILE = SAVE_DIR / "custom_gases.json"
 import kivy
 from kivy.app import App
 from kivy.uix.gridlayout import GridLayout
