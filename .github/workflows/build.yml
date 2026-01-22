@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 120
+    timeout-minutes: 180  # 👈 3 SAAT
     
     steps:
     - uses: actions/checkout@v4
@@ -16,34 +16,56 @@ jobs:
       with:
         python-version: '3.9'
     
-    - name: Install dependencies
+    - name: Install ONLY essential dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git zip unzip python3-pip openjdk-11-jdk
+        sudo apt-get install -y git zip unzip python3-pip openjdk-11-jdk wget
     
-    - name: Install Buildozer FRESH
+    - name: Install Buildozer
       run: |
-        rm -rf ~/.buildozer
-        rm -rf .buildozer
         pip install --upgrade pip
-        pip install buildozer cython kivy==2.2.1 plyer
-        
-    - name: Create buildozer.spec with echo
+        pip install buildozer cython==0.29.36 kivy==2.2.1
+    
+    - name: Create optimized buildozer.spec
       run: |
         echo '[app]' > buildozer.spec
         echo 'title = Orifis' >> buildozer.spec
-        echo 'package.name = orifis' >> buildozer.spec
+        echo 'package.name = orifisapp' >> buildozer.spec
         echo 'package.domain = org.lutfi' >> buildozer.spec
         echo 'source.dir = .' >> buildozer.spec
+        echo 'source.include_exts = py,json' >> buildozer.spec  # 👈 SADECE PY VE JSON
         echo 'version = 1.0' >> buildozer.spec
         echo 'requirements = python3,kivy==2.2.1' >> buildozer.spec
         echo 'orientation = portrait' >> buildozer.spec
         echo 'android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE' >> buildozer.spec
         echo 'android.api = 30' >> buildozer.spec
         echo 'android.minapi = 21' >> buildozer.spec
-        echo 'android.archs = armeabi-v7a' >> buildozer.spec
+        echo 'android.sdk = 30' >> buildozer.spec
+        echo 'android.ndk = 23b' >> buildozer.spec  # 👈 ESKİ NDK
+        echo 'android.archs = armeabi-v7a' >> buildozer.spec  # 👈 TEK ARCH
         echo 'android.accept_sdk_license = True' >> buildozer.spec
+        echo 'log_level = 2' >> buildozer.spec
     
-    - name: Build APK
+    - name: Pre-download Android SDK
       run: |
-        buildozer -v android debug
+        # SDK'yı önceden indir
+        mkdir -p ~/.android
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+        mkdir -p ~/.android/cmdline-tools
+        unzip -q cmdline-tools.zip -d ~/.android/cmdline-tools
+        mv ~/.android/cmdline-tools/cmdline-tools ~/.android/cmdline-tools/latest
+        echo "export ANDROID_HOME=\$HOME/.android" >> $GITHUB_ENV
+    
+    - name: Build APK with retry
+      run: |
+        # Cache temizle
+        rm -rf .buildozer
+        
+        # Build'i başlat (timeout 150 dakika)
+        timeout 1500 buildozer -v android debug || echo "Build continues..."
+        
+        # Eğer ilk seferde olmazsa, tekrar dene
+        if [ ! -f "bin/*.apk" ]; then
+          echo "First build failed, retrying..."
+          buildozer -v android debug
+        fi
