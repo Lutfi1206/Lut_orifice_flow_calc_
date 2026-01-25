@@ -678,9 +678,9 @@ class MainScreen(Screen):
         self.current_anlik_popup = None
         
         # YENİ: Yazı boyutu ve yükseklik ayarları
-        self.result_font_size = dp(12)  # Varsayılan yazı boyutu
-        self.result_box_height = dp(700)  # Varsayılan yükseklik
-        self.anlik_result_font_size = dp(10)  # Anlık hesap için varsayılan
+        self.result_font_size = dp(13)  # Varsayılan yazı boyutu
+        self.result_box_height = dp(1250)  # Varsayılan yükseklik
+        self.anlik_result_font_size = dp(15)  # Anlık hesap için varsayılan
         
         self.setup_ui()
         self.setup_events()
@@ -1621,13 +1621,13 @@ class MainScreen(Screen):
         self.font_size_slider = Slider(
             min=8,
             max=20,
-            value=self.result_font_size,
+            value=13,  # Varsayılan 13 dp
             size_hint_x=0.5
         )
         self.font_size_slider.bind(value=self.on_font_size_change)
         
         self.font_size_value = Label(
-            text=f'{self.result_font_size:.0f} dp',
+            text=f'{13:.0f} dp',  # Başlangıç değeri 13
             size_hint_x=0.15,
             font_size=dp(10),
             color=COLORS['primary_blue'],
@@ -1657,14 +1657,14 @@ class MainScreen(Screen):
         
         self.box_height_slider = Slider(
             min=400,
-            max=1000,
-            value=self.result_box_height,
+            max=1500,
+            value=1250,  # Varsayılan 1250 dp
             size_hint_x=0.5
         )
         self.box_height_slider.bind(value=self.on_box_height_change)
         
         self.box_height_value = Label(
-            text=f'{self.result_box_height:.0f} dp',
+            text=f'{1250:.0f} dp',  # Başlangıç değeri 1250
             size_hint_x=0.15,
             font_size=dp(10),
             color=COLORS['primary_blue'],
@@ -1682,7 +1682,7 @@ class MainScreen(Screen):
     
         # HESAPLAMA SONUÇLARI - YAZI BOYUTU AYARLARINDAN SONRA, DAHA GENİŞ
         results_card = BoxLayout(orientation='vertical', padding=dp(16), spacing=dp(6),
-                                size_hint_y=None, height=self.result_box_height)
+                                size_hint_y=None, height=dp(1250))
     
         with results_card.canvas.before:
             Color(*COLORS['bg_card'])
@@ -1726,33 +1726,44 @@ class MainScreen(Screen):
     
         results_card.add_widget(results_title)
     
-        # Sonuç alanı - DAHA GENİŞ SCROLLVIEW
+        # Sonuç alanı - SCROLLVIEW DÜZELTMESİ
         results_scroll = ScrollView(
             size_hint=(1, 1),
-            bar_width=dp(8),  # Daha kalem scroll bar
+            bar_width=dp(8),  # Scroll bar kalınlığı
             bar_color=COLORS['scroll_dark'],
             bar_inactive_color=(0.5, 0.5, 0.5, 0.3),
             do_scroll_x=False,
-            do_scroll_y=True
+            do_scroll_y=True,
+            scroll_type=['bars', 'content']
         )
     
-        self.result_text = CompactTextInput(
+        # Normal TextInput kullan - CompactTextInput yerine
+        self.result_text = TextInput(
             hint_text="""Hesaplama sonuçları burada görünecek...
-    
-    Değerleri girin
-    'HESAPLAYIN' butonuna tıklayın
-    Sonuçlar burada görünecek
-    Designed by Lutfi
-    
-    ═══════════════════════════════
-    ORİFİS HESAPLAYICI v9.8
-    ═══════════════════════════════""",
+
+Değerleri girin
+'HESAPLAYIN' butonuna tıklayın
+Sonuçlar burada görünecek
+Designed by Lutfi
+
+═══════════════════════════════
+ORİFİS HESAPLAYICI v9.8
+═══════════════════════════════""",
             size_hint_y=None,
-            height=self.result_box_height - dp(50),
-            font_size=self.result_font_size,
+            height=dp(1200),  # 1250 - 50 (başlık)
+            font_size=dp(13),  # Varsayılan 13 dp
             multiline=True,
-            readonly=True
+            readonly=True,
+            background_color=COLORS['input_bg'],
+            foreground_color=COLORS['text_white'],
+            cursor_color=COLORS['primary_blue'],
+            padding=[dp(12), dp(12)],
+            scroll_y=1  # En üstten başlasın
         )
+        
+        # Başlangıç değerlerini ayarla
+        self.result_text.font_size = dp(13)
+        
         results_scroll.add_widget(self.result_text)
         results_card.add_widget(results_scroll)
         content.add_widget(results_card)
@@ -2658,9 +2669,9 @@ Designed by Lutfi
         # Main Content Area - SIDE BY SIDE
         main_container = BoxLayout(orientation='horizontal', spacing=0)
         
-        # ========== SOL TARAF: DEĞERLERİ GİRİN (%25) - DAHA KÜÇÜK ==========
+        # ========== SOL TARAF: DEĞERLERİ GİRİN (%25) - SOL ÜST HİZALAMA ==========
         left_panel = BoxLayout(orientation='vertical', spacing=dp(4),
-                              padding=[dp(6), dp(6)], size_hint_x=0.25)  # %25 genişlik
+                              padding=[dp(6), dp(6), dp(6), dp(6)], size_hint_x=0.25)
         
         with left_panel.canvas.before:
             Color(*COLORS['bg_card'])
@@ -2678,7 +2689,7 @@ Designed by Lutfi
         
         left_panel.bind(pos=update_left_graphics, size=update_left_graphics)
         
-        # Inputs Title - DAHA KÜÇÜK
+        # Inputs Title - EN ÜST
         inputs_title_box = BoxLayout(orientation='vertical', size_hint_y=None, height=dp(22))
         with inputs_title_box.canvas.before:
             Color(*COLORS['primary_blue_dark'])
@@ -2702,9 +2713,9 @@ Designed by Lutfi
         inputs_title_box.add_widget(inputs_title)
         left_panel.add_widget(inputs_title_box)
         
-        # ΔP Input - DAHA KÜÇÜK
+        # ΔP Input - SOL ÜST
         dp_container = BoxLayout(orientation='vertical', spacing=dp(1),
-                                size_hint_y=None, height=dp(65))
+                                size_hint=(1, None), height=dp(65))
         with dp_container.canvas.before:
             Color(0.345, 0.651, 1.0, 0.1)
             dp_card_bg = RoundedRectangle(pos=dp_container.pos, size=dp_container.size, radius=[dp(4)])
@@ -2758,9 +2769,9 @@ Designed by Lutfi
         dp_container.add_widget(dp_unit)
         left_panel.add_widget(dp_container)
         
-        # Pressure Input - DAHA KÜÇÜK
+        # Pressure Input
         p_container = BoxLayout(orientation='vertical', spacing=dp(1),
-                               size_hint_y=None, height=dp(65))
+                               size_hint=(1, None), height=dp(65))
         with p_container.canvas.before:
             Color(0.139, 0.525, 0.212, 0.1)
             p_card_bg = RoundedRectangle(pos=p_container.pos, size=p_container.size, radius=[dp(4)])
@@ -2812,9 +2823,9 @@ Designed by Lutfi
         p_container.add_widget(self.anlik_p_birim_spinner)
         left_panel.add_widget(p_container)
         
-        # Temperature Input - DAHA KÜÇÜK
+        # Temperature Input
         t_container = BoxLayout(orientation='vertical', spacing=dp(1),
-                               size_hint_y=None, height=dp(65))
+                               size_hint=(1, None), height=dp(65))
         with t_container.canvas.before:
             Color(0.537, 0.341, 0.898, 0.1)
             t_card_bg = RoundedRectangle(pos=t_container.pos, size=t_container.size, radius=[dp(4)])
@@ -2866,17 +2877,21 @@ Designed by Lutfi
         t_container.add_widget(self.anlik_t_birim_spinner)
         left_panel.add_widget(t_container)
         
-        # Calculate Button - DAHA KÜÇÜK
+        # Calculate Button - EN ALTTA
         hesapla_btn = CompactButton(
             "HESAPLA",
             color_type="warning",
-            icon="",
+            icon="⚡",
             size_hint_y=None,
-            height=dp(28)
+            height=dp(32)
         )
-        hesapla_btn.font_size = dp(8)
+        hesapla_btn.font_size = dp(9)
         hesapla_btn.bind(on_press=self.anlik_hesapla_popup)
         left_panel.add_widget(hesapla_btn)
+        
+        # Spacer - Kalan alanı doldur (inputları yukarıda tutar)
+        spacer = BoxLayout(size_hint_y=1)
+        left_panel.add_widget(spacer)
         
         main_container.add_widget(left_panel)
         
@@ -2946,27 +2961,23 @@ Designed by Lutfi
         anlik_control_row.add_widget(self.anlik_font_value)
         right_panel.add_widget(anlik_control_row)
         
-        # SCROLLVIEW for results
+        # SCROLLVIEW for results - DÜZELTİLMİŞ
         results_scroll = ScrollView(
             size_hint=(1, 1),
-            bar_width=dp(5),
+            bar_width=dp(8),
             bar_color=COLORS['warning_orange'],
-            bar_inactive_color=(0.824, 0.663, 0.133, 0.2),
+            bar_inactive_color=(0.824, 0.663, 0.133, 0.3),
             do_scroll_x=False,
             do_scroll_y=True,
             scroll_type=['bars', 'content'],
-            effect_cls='ScrollEffect'
+            effect_cls='ScrollEffect',
+            always_overscroll=False
         )
         
-        # Results container
-        results_container = BoxLayout(orientation='vertical', padding=[dp(1), dp(1)],
-                                     size_hint_y=None)
-        results_container.bind(minimum_height=results_container.setter('height'))
-        
-        # Styled result text input - NO EMOJIS
-        self.anlik_sonuc_label = CompactTextInput(
+        # Styled result text input - SCROLLABLE
+        self.anlik_sonuc_label = TextInput(
             hint_text="""ANLIK HESAP SONUÇLARI
-            
+    
     KULLANIM:
     1. Sol panelden değerleri girin
     2. HESAPLA butonuna tıklayın
@@ -2983,17 +2994,17 @@ Designed by Lutfi
     Hesaplama için sol paneli kullanın
     Designed by Lutfi""",
             size_hint_y=None,
-            height=dp(450),
+            height=dp(600),  # Sabit yükseklik
             font_size=self.anlik_result_font_size,
             multiline=True,
             readonly=True,
             background_color=(0.051, 0.067, 0.090, 1),
             foreground_color=COLORS['text_white'],
-            cursor_color=COLORS['warning_orange']
+            cursor_color=COLORS['warning_orange'],
+            padding=[dp(12), dp(12), dp(12), dp(12)]
         )
         
-        results_container.add_widget(self.anlik_sonuc_label)
-        results_scroll.add_widget(results_container)
+        results_scroll.add_widget(self.anlik_sonuc_label)
         right_panel.add_widget(results_scroll)
         
         main_container.add_widget(right_panel)
@@ -3021,7 +3032,7 @@ Designed by Lutfi
         footer.bind(pos=update_footer_graphics, size=update_footer_graphics)
         
         pdf_btn = CompactButton(
-            "TXT OLUŞTUR",  # İsim değişti
+            "TXT OLUŞTUR",
             color_type="danger",
             icon="",
             size_hint_x=0.33
@@ -3181,7 +3192,7 @@ Designed by Lutfi"""
             self.show_snackbar("❌ Sistem hatası", "error")
 
     def create_anlik_pdf_safe(self, popup):
-        """Anlık hesap sonuçlarını güvenli şekilde PDF olarak oluştur"""
+        """Anlık hesap sonuçlarını güvenli şekilde TXT olarak oluştur"""
         try:
             if not self.anlik_sonuc_label.text or "ANLIK HESAP SONUÇLARI" not in self.anlik_sonuc_label.text:
                 self.show_snackbar("❌ Önce anlık hesap yapın!", "error")
@@ -3191,73 +3202,158 @@ Designed by Lutfi"""
             if popup:
                 popup.dismiss()
             
-            # Tüm emojileri ve özel karakterleri temizle
-            clean_text = self.anlik_sonuc_label.text
-            # Emoji ve özel karakterleri kaldır
-            emojis = ["📊", "📋", "❌", "✅", "⚠️", "⚡", "📝", "🎛️", "📏", "📊", "🌡️", 
-                     "⚙️", "🚀", "💾", "📂", "🧹", "🔄", "❓", "➕", "🌍", "🔥", "📅",
-                     "📏", "⚡", "📊", "🎯", "🔢", "📊", "╔", "║", "╚", "═", "│", "┌",
-                     "└", "┘", "┐", "─", "╭", "╮", "╯", "╰", "🔵", "🟢", "⏳", "📄",
-                     "✖️", "💡", "🗂️", "📁", "🎨", "🔧", "💎", "🌟", "✨", "🔍", "📈",
-                     "📉", "🎪", "🎭", "🎨", "🎯", "🔖", "📍", "📌", "✏️", "📝", "🔎"]
-            
-            for emoji in emojis:
-                clean_text = clean_text.replace(emoji, "")
-            
-            # Sadece ASCII karakterlere izin ver
-            clean_text = ''.join(char for char in clean_text if ord(char) < 128 or char in ['ı', 'ğ', 'ü', 'ş', 'ö', 'ç', 'İ', 'Ğ', 'Ü', 'Ş', 'Ö', 'Ç'])
-            
-            self.show_snackbar("📄 PDF oluşturuluyor...", "info")
-            
-            # PDF oluşturmak yerine TXT oluştur ve paylaş
+            # Android'de doğru dizin yolunu al
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             dosya_adi = f"anlik_hesap_{timestamp}.txt"
-            kayit_yolu = self.orifis_kayit.get_save_dir() / dosya_adi
+            
+            # Android için doğru kayıt dizinini bul
+            if current_platform == "Android":
+                try:
+                    from android.storage import primary_external_storage_path
+                    base_dir = Path(primary_external_storage_path()) / "OrifisApp" / "orifis_kayitlar"
+                    base_dir.mkdir(parents=True, exist_ok=True)
+                    kayit_yolu = base_dir / dosya_adi
+                except Exception as e:
+                    print(f"Android dizin hatası: {e}")
+                    # Yedek yol
+                    kayit_yolu = Path("/storage/emulated/0/OrifisApp/orifis_kayitlar") / dosya_adi
+                    kayit_yolu.parent.mkdir(parents=True, exist_ok=True)
+            else:
+                # Windows/Linux için
+                kayit_yolu = Path("orifis_kayitlar") / dosya_adi
+                kayit_yolu.parent.mkdir(parents=True, exist_ok=True)
             
             try:
+                # Temiz metin oluştur
+                clean_text = self.anlik_sonuc_label.text
+                # Basit temizleme
+                import re
+                clean_text = re.sub(r'[^\x00-\x7F\u00C0-\u017F\u011E\u011F\u0130\u0131\u015E\u015F\u00D6\u00F6\u00C7\u00E7]', '', clean_text)
+                
+                # Dosyayı oluştur
                 with open(kayit_yolu, 'w', encoding='utf-8') as f:
-                    f.write("=" * 60 + "\n")
+                    f.write("=" * 50 + "\n")
                     f.write("ANLIK HESAP SONUÇLARI\n")
-                    f.write("=" * 60 + "\n\n")
+                    f.write("=" * 50 + "\n\n")
                     f.write(clean_text)
-                    f.write("\n\n" + "=" * 60 + "\n")
+                    f.write("\n\n" + "=" * 50 + "\n")
                     f.write(f"Kayıt Tarihi: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                    f.write("=" * 60)
+                    f.write(f"Dosya Konumu: {str(kayit_yolu)}\n")
+                    f.write("=" * 50)
                 
-                # Android'de paylaşım seçeneklerini göster
-                if platform.system() == "Android":
-                    try:
-                        from jnius import autoclass, cast
-                        PythonActivity = autoclass('org.kivy.android.PythonActivity')
-                        Intent = autoclass('android.content.Intent')
-                        Uri = autoclass('android.net.Uri')
-                        File = autoclass('java.io.File')
-                        
-                        context = PythonActivity.mActivity
-                        file = File(str(kayit_yolu))
-                        uri = Uri.fromFile(file)
-                        
-                        intent = Intent(Intent.ACTION_SEND)
-                        intent.setType("text/plain")
-                        intent.putExtra(Intent.EXTRA_STREAM, uri)
-                        intent.putExtra(Intent.EXTRA_SUBJECT, "Anlık Hesap Sonuçları")
-                        intent.putExtra(Intent.EXTRA_TEXT, f"Anlık hesap sonuçları: {dosya_adi}")
-                        
-                        context.startActivity(Intent.createChooser(intent, "Sonuçları Paylaş"))
-                        
-                    except Exception as e:
-                        self.show_snackbar(f"✅ TXT hazır: {dosya_adi}", "success")
-                        Clock.schedule_once(lambda dt: self.show_txt_share_options(dosya_adi, kayit_yolu), 0.5)
+                # Başarı mesajı göster
+                self.show_snackbar(f"✅ TXT oluşturuldu: {dosya_adi}", "success")
+                
+                # Android'de dosyayı açma seçeneği göster
+                if current_platform == "Android":
+                    Clock.schedule_once(lambda dt: self.show_android_file_options(kayit_yolu, dosya_adi), 0.5)
                 else:
-                    # Windows/Linux için
-                    self.show_snackbar(f"✅ TXT hazır: {dosya_adi}", "success")
-                    Clock.schedule_once(lambda dt: self.show_txt_share_options(dosya_adi, kayit_yolu), 0.5)
-                
+                    # Diğer platformlar için
+                    Clock.schedule_once(lambda dt: self.show_file_options(kayit_yolu, dosya_adi), 0.5)
+                    
+            except PermissionError:
+                self.show_snackbar("❌ Yazma izni reddedildi!", "error")
             except Exception as e:
                 self.show_snackbar(f"❌ Dosya oluşturma hatası: {str(e)[:50]}", "error")
                 
         except Exception as e:
-            self.show_snackbar(f"❌ PDF oluşturma hatası: {str(e)[:50]}", "error")
+            self.show_snackbar(f"❌ İşlem hatası: {str(e)[:50]}", "error")
+    
+    def show_android_file_options(self, kayit_yolu, dosya_adi):
+        """Android için dosya seçeneklerini göster"""
+        try:
+            content = BoxLayout(orientation='vertical', spacing=dp(15), padding=dp(20))
+            
+            content.add_widget(Label(
+                text=f"✅ Dosya Oluşturuldu\n{dosya_adi}",
+                color=COLORS['text_white'],
+                size_hint_y=None,
+                height=dp(60),
+                font_size=dp(14),
+                halign='center'
+            ))
+            
+            path_label = Label(
+                text=f"Konum:\n{str(kayit_yolu)}",
+                color=COLORS['primary_blue'],
+                size_hint_y=None,
+                height=dp(80),
+                font_size=dp(10),
+                halign='center'
+            )
+            path_label.bind(size=path_label.setter('text_size'))
+            content.add_widget(path_label)
+            
+            button_box = BoxLayout(orientation='horizontal', spacing=dp(10),
+                                  size_hint_y=None, height=dp(40))
+            
+            def open_file_explorer(instance):
+                try:
+                    from jnius import autoclass
+                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                    Intent = autoclass('android.content.Intent')
+                    Uri = autoclass('android.net.Uri')
+                    File = autoclass('java.io.File')
+                    
+                    context = PythonActivity.mActivity
+                    file = File(str(kayit_yolu.parent))  # Dizini aç
+                    
+                    # Dosya yöneticisini aç
+                    intent = Intent(Intent.ACTION_VIEW)
+                    intent.setDataAndType(Uri.fromFile(file), "*/*")
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    
+                    context.startActivity(intent)
+                    popup.dismiss()
+                except Exception as e:
+                    self.show_snackbar("❌ Dosya yöneticisi açılamadı", "error")
+            
+            def share_file(instance):
+                try:
+                    from jnius import autoclass
+                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                    Intent = autoclass('android.content.Intent')
+                    Uri = autoclass('android.net.Uri')
+                    File = autoclass('java.io.File')
+                    
+                    context = PythonActivity.mActivity
+                    file = File(str(kayit_yolu))
+                    uri = Uri.fromFile(file)
+                    
+                    # Paylaşım intent'i
+                    intent = Intent(Intent.ACTION_SEND)
+                    intent.setType("text/plain")
+                    intent.putExtra(Intent.EXTRA_STREAM, uri)
+                    intent.putExtra(Intent.EXTRA_SUBJECT, f"Anlık Hesap Sonuçları: {dosya_adi}")
+                    intent.putExtra(Intent.EXTRA_TEXT, f"Orifis Anlık Hesap Sonuçları: {dosya_adi}")
+                    
+                    context.startActivity(Intent.createChooser(intent, "Dosyayı Paylaş"))
+                    popup.dismiss()
+                except Exception as e:
+                    self.show_snackbar("❌ Paylaşım başlatılamadı", "error")
+            
+            def close_popup(instance):
+                popup.dismiss()
+            
+            goster_btn = CompactButton("KONUMU AÇ", color_type="primary", on_press=open_file_explorer)
+            paylas_btn = CompactButton("PAYLAŞ", color_type="success", on_press=share_file)
+            kapat_btn = CompactButton("KAPAT", color_type="secondary", on_press=close_popup)
+            
+            button_box.add_widget(goster_btn)
+            button_box.add_widget(paylas_btn)
+            button_box.add_widget(kapat_btn)
+            content.add_widget(button_box)
+            
+            popup = Popup(
+                title='📄 Dosya Oluşturuldu',
+                content=content,
+                size_hint=(0.9, 0.7),
+                background_color=COLORS['bg_card']
+            )
+            popup.open()
+            
+        except Exception as e:
+            self.show_snackbar(f"❌ Seçenek gösterilemedi: {str(e)[:50]}", "error")
     
     def show_txt_share_options(self, dosya_adi, kayit_yolu):
         """TXT paylaşım seçeneklerini göster"""
