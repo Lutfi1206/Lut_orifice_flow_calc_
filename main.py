@@ -381,20 +381,30 @@ class OrifisHesap:
     
     def get_save_dir(self):
         try:
-            # current_platform'u kullan
             if current_platform == "Android":
                 try:
-                    from android.storage import primary_external_storage_path
-                    base = Path(primary_external_storage_path()) / "OrifisApp"
+                    # Önce app_storage_path dene
+                    from android.storage import app_storage_path
+                    base = Path(app_storage_path())
                 except:
-                    base = Path(".")
+                    # Değilse context.getFilesDir() kullan
+                    try:
+                        from jnius import autoclass
+                        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                        context = PythonActivity.mActivity
+                        files_dir = context.getFilesDir().getAbsolutePath()
+                        base = Path(files_dir)
+                    except:
+                        base = Path(".")
             else:
                 base = Path(".")
             
             save_dir = base / "orifis_kayitlar"
             save_dir.mkdir(parents=True, exist_ok=True)
+            print(f"Save dir: {save_dir}")
             return save_dir
-        except Exception:
+        except Exception as e:
+            print(f"get_save_dir error: {e}")
             return Path(".")
     
     def get_gases_file(self):
@@ -3202,65 +3212,74 @@ Designed by Lutfi"""
             if popup:
                 popup.dismiss()
             
-            # Android'de doğru dizin yolunu al
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             dosya_adi = f"anlik_hesap_{timestamp}.txt"
             
-            # Android için doğru kayıt dizinini bul
-            if current_platform == "Android":
-                try:
-                    from android.storage import primary_external_storage_path
-                    base_dir = Path(primary_external_storage_path()) / "OrifisApp" / "orifis_kayitlar"
-                    base_dir.mkdir(parents=True, exist_ok=True)
-                    kayit_yolu = base_dir / dosya_adi
-                except Exception as e:
-                    print(f"Android dizin hatası: {e}")
-                    # Yedek yol
-                    kayit_yolu = Path("/storage/emulated/0/OrifisApp/orifis_kayitlar") / dosya_adi
+            # Platform bazlı dosya yolu
+            try:
+                if current_platform == "Android":
+                    try:
+                        from android.storage import app_storage_path
+                        base_dir = Path(app_storage_path())
+                    except:
+                        from jnius import autoclass
+                        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                        context = PythonActivity.mActivity
+                        files_dir = context.getFilesDir().getAbsolutePath()
+                        base_dir = Path(files_dir)
+                    
+                    save_dir = base_dir / "orifis_kayitlar"
+                    save_dir.mkdir(parents=True, exist_ok=True)
+                    kayit_yolu = save_dir / dosya_adi
+                else:
+                    # Windows/Linux için
+                    kayit_yolu = Path("orifis_kayitlar") / dosya_adi
                     kayit_yolu.parent.mkdir(parents=True, exist_ok=True)
-            else:
-                # Windows/Linux için
+            except Exception as e:
+                print(f"Dizin oluşturma hatası: {e}")
                 kayit_yolu = Path("orifis_kayitlar") / dosya_adi
                 kayit_yolu.parent.mkdir(parents=True, exist_ok=True)
             
             try:
-                # Temiz metin oluştur
-                clean_text = self.anlik_sonuc_label.text
-                # Basit temizleme
-                import re
-                clean_text = re.sub(r'[^\x00-\x7F\u00C0-\u017F\u011E\u011F\u0130\u0131\u015E\u015F\u00D6\u00F6\u00C7\u00E7]', '', clean_text)
-                
                 # Dosyayı oluştur
                 with open(kayit_yolu, 'w', encoding='utf-8') as f:
                     f.write("=" * 50 + "\n")
                     f.write("ANLIK HESAP SONUÇLARI\n")
                     f.write("=" * 50 + "\n\n")
-                    f.write(clean_text)
+                    f.write(self.anlik_sonuc_label.text)
                     f.write("\n\n" + "=" * 50 + "\n")
                     f.write(f"Kayıt Tarihi: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                     f.write(f"Dosya Konumu: {str(kayit_yolu)}\n")
                     f.write("=" * 50)
                 
-                # Başarı mesajı göster
+                print(f"Dosya oluşturuldu: {kayit_yolu}")
+                
+                # Başarı mesajı
                 self.show_snackbar(f"✅ TXT oluşturuldu: {dosya_adi}", "success")
                 
-                # Android'de dosyayı açma seçeneği göster
+                # Platform bazlı dosya seçenekleri
                 if current_platform == "Android":
-                    Clock.schedule_once(lambda dt: self.show_android_file_options(kayit_yolu, dosya_adi), 0.5)
+                    Clock.schedule_once(lambda dt: self.show_android_file_info(str(kayit_yolu), dosya_adi), 0.5)
                 else:
-                    # Diğer platformlar için
-                    Clock.schedule_once(lambda dt: self.show_file_options(kayit_yolu, dosya_adi), 0.5)
+                    Clock.schedule_once(lambda dt: self.show_desktop_file_options(kayit_yolu, dosya_adi), 0.5)
                     
             except PermissionError:
+                print("İzin hatası!")
                 self.show_snackbar("❌ Yazma izni reddedildi!", "error")
             except Exception as e:
-                self.show_snackbar(f"❌ Dosya oluşturma hatası: {str(e)[:50]}", "error")
+                print(f"Dosya yazma hatası: {e}")
+                import traceback
+                traceback.print_exc()
+                self.show_snackbar(f"❌ Dosya hatası: {str(e)[:30]}", "error")
                 
         except Exception as e:
-            self.show_snackbar(f"❌ İşlem hatası: {str(e)[:50]}", "error")
+            print(f"İşlem hatası: {e}")
+            import traceback
+            traceback.print_exc()
+            self.show_snackbar(f"❌ Hata: {str(e)[:30]}", "error")
     
-    def show_android_file_options(self, kayit_yolu, dosya_adi):
-        """Android için dosya seçeneklerini göster"""
+    def show_desktop_file_options(self, kayit_yolu, dosya_adi):
+        """Windows/Linux/Mac için dosya seçenekleri"""
         try:
             content = BoxLayout(orientation='vertical', spacing=dp(15), padding=dp(20))
             
@@ -3287,73 +3306,123 @@ Designed by Lutfi"""
             button_box = BoxLayout(orientation='horizontal', spacing=dp(10),
                                   size_hint_y=None, height=dp(40))
             
-            def open_file_explorer(instance):
+            def open_location(instance):
+                import os, subprocess
                 try:
-                    from jnius import autoclass
-                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
-                    Intent = autoclass('android.content.Intent')
-                    Uri = autoclass('android.net.Uri')
-                    File = autoclass('java.io.File')
-                    
-                    context = PythonActivity.mActivity
-                    file = File(str(kayit_yolu.parent))  # Dizini aç
-                    
-                    # Dosya yöneticisini aç
-                    intent = Intent(Intent.ACTION_VIEW)
-                    intent.setDataAndType(Uri.fromFile(file), "*/*")
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    
-                    context.startActivity(intent)
-                    popup.dismiss()
+                    if current_platform == "Windows":
+                        os.startfile(str(kayit_yolu.parent))
+                    elif current_platform == "Darwin":  # macOS
+                        subprocess.call(["open", str(kayit_yolu.parent)])
+                    else:  # Linux
+                        subprocess.call(["xdg-open", str(kayit_yolu.parent)])
+                    file_popup.dismiss()
                 except Exception as e:
-                    self.show_snackbar("❌ Dosya yöneticisi açılamadı", "error")
-            
-            def share_file(instance):
-                try:
-                    from jnius import autoclass
-                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
-                    Intent = autoclass('android.content.Intent')
-                    Uri = autoclass('android.net.Uri')
-                    File = autoclass('java.io.File')
-                    
-                    context = PythonActivity.mActivity
-                    file = File(str(kayit_yolu))
-                    uri = Uri.fromFile(file)
-                    
-                    # Paylaşım intent'i
-                    intent = Intent(Intent.ACTION_SEND)
-                    intent.setType("text/plain")
-                    intent.putExtra(Intent.EXTRA_STREAM, uri)
-                    intent.putExtra(Intent.EXTRA_SUBJECT, f"Anlık Hesap Sonuçları: {dosya_adi}")
-                    intent.putExtra(Intent.EXTRA_TEXT, f"Orifis Anlık Hesap Sonuçları: {dosya_adi}")
-                    
-                    context.startActivity(Intent.createChooser(intent, "Dosyayı Paylaş"))
-                    popup.dismiss()
-                except Exception as e:
-                    self.show_snackbar("❌ Paylaşım başlatılamadı", "error")
+                    print(f"Konum açma hatası: {e}")
+                    self.show_snackbar("❌ Konum açılamadı", "error")
             
             def close_popup(instance):
-                popup.dismiss()
+                file_popup.dismiss()
             
-            goster_btn = CompactButton("KONUMU AÇ", color_type="primary", on_press=open_file_explorer)
-            paylas_btn = CompactButton("PAYLAŞ", color_type="success", on_press=share_file)
+            goster_btn = CompactButton("KLASÖRÜ AÇ", color_type="primary", on_press=open_location)
             kapat_btn = CompactButton("KAPAT", color_type="secondary", on_press=close_popup)
             
             button_box.add_widget(goster_btn)
-            button_box.add_widget(paylas_btn)
             button_box.add_widget(kapat_btn)
             content.add_widget(button_box)
             
-            popup = Popup(
+            file_popup = Popup(
                 title='📄 Dosya Oluşturuldu',
                 content=content,
-                size_hint=(0.9, 0.7),
+                size_hint=(0.85, 0.6),
                 background_color=COLORS['bg_card']
             )
-            popup.open()
+            file_popup.open()
             
         except Exception as e:
-            self.show_snackbar(f"❌ Seçenek gösterilemedi: {str(e)[:50]}", "error")
+            print(f"Popup hatası: {e}")
+            self.show_snackbar(f"✅ Dosya kaydedildi: {dosya_adi}", "success")
+    
+    def show_android_file_info(self, kayit_yolu, dosya_adi):
+        """Android için basit bilgi popup'ı"""
+        try:
+            content = BoxLayout(orientation='vertical', spacing=dp(15), padding=dp(20))
+            
+            content.add_widget(Label(
+                text=f"✅ Dosya Kaydedildi\n{dosya_adi}",
+                color=COLORS['text_white'],
+                size_hint_y=None,
+                height=dp(60),
+                font_size=dp(14),
+                halign='center'
+            ))
+            
+            info_label = Label(
+                text="Dosya uygulama dahili\ndepolamasına kaydedildi.",
+                color=COLORS['primary_blue'],
+                size_hint_y=None,
+                height=dp(50),
+                font_size=dp(11),
+                halign='center'
+            )
+            info_label.bind(size=info_label.setter('text_size'))
+            content.add_widget(info_label)
+            
+            path_label = Label(
+                text=f"Konum:\n{kayit_yolu}",
+                color=COLORS['text_gray'],
+                size_hint_y=None,
+                height=dp(60),
+                font_size=dp(9),
+                halign='center'
+            )
+            path_label.bind(size=path_label.setter('text_size'))
+            content.add_widget(path_label)
+            
+            def close_popup(instance):
+                info_popup.dismiss()
+            
+            kapat_btn = CompactButton("TAMAM", color_type="primary", on_press=close_popup)
+            content.add_widget(kapat_btn)
+            
+            info_popup = Popup(
+                title='📄 Dosya Kaydedildi',
+                content=content,
+                size_hint=(0.85, 0.55),
+                background_color=COLORS['bg_card']
+            )
+            info_popup.open()
+            
+        except Exception as e:
+            print(f"Popup hatası: {e}")
+            self.show_snackbar("✅ Dosya kaydedildi", "success")
+    
+    def kaydet_anlik_hesap(self, popup):
+        """Anlık hesap sonuçlarını kaydet"""
+        try:
+            if not self.anlik_sonuc_label.text or "ANLIK HESAP SONUÇLARI" not in self.anlik_sonuc_label.text:
+                self.show_snackbar("❌ Önce anlık hesap yapın!", "error")
+                return
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            dosya_adi = f"anlik_hesap_{timestamp}.txt"
+            kayit_yolu = self.orifis_kayit.get_save_dir() / dosya_adi
+            
+            with open(kayit_yolu, 'w', encoding='utf-8') as f:
+                f.write("=" * 50 + "\n")
+                f.write("ANLIK HESAP SONUÇLARI\n")
+                f.write("=" * 50 + "\n\n")
+                f.write(self.anlik_sonuc_label.text)
+                f.write("\n\n" + "=" * 50 + "\n")
+                f.write(f"Kayıt Tarihi: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("=" * 50)
+            
+            self.show_snackbar(f"✅ Kaydedildi: {dosya_adi}", "success")
+            
+        except Exception as e:
+            print(f"Kayıt hatası: {e}")
+            self.show_snackbar(f"❌ Kayıt hatası: {str(e)[:50]}", "error")
+                      
+    
     
     def show_txt_share_options(self, dosya_adi, kayit_yolu):
         """TXT paylaşım seçeneklerini göster"""
@@ -3484,31 +3553,6 @@ Designed by Lutfi"""
             
         except Exception as e:
             self.show_snackbar(f"❌ Paylaşım hatası: {str(e)[:50]}", "error")
-
-    def kaydet_anlik_hesap(self, popup):
-        """Anlık hesap sonuçlarını kaydet"""
-        try:
-            if not self.anlik_sonuc_label.text or "ANLIK HESAP SONUÇLARI" not in self.anlik_sonuc_label.text:
-                self.show_snackbar("❌ Önce anlık hesap yapın!", "error")
-                return
-            
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            dosya_adi = f"anlik_hesap_{timestamp}.txt"
-            kayit_yolu = self.orifis_kayit.get_save_dir() / dosya_adi
-            
-            with open(kayit_yolu, 'w', encoding='utf-8') as f:
-                f.write("=" * 50 + "\n")
-                f.write("ANLIK HESAP SONUÇLARI\n")
-                f.write("=" * 50 + "\n\n")
-                f.write(self.anlik_sonuc_label.text)
-                f.write("\n\n" + "=" * 50 + "\n")
-                f.write(f"Kayıt Tarihi: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write("=" * 50)
-            
-            self.show_snackbar(f"✅ Kaydedildi: {dosya_adi}", "success")
-            
-        except Exception as e:
-            self.show_snackbar(f"❌ Kayıt hatası: {str(e)[:50]}", "error")
 
     def kaydet_hesaplama(self, instance):
         if not self.hesaplama_gecmisi:
