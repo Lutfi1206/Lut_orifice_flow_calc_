@@ -40,25 +40,26 @@ jobs:
         pip install buildozer cython==0.29.33
         pip install kivy==2.2.1
 
-    - name: Create buildozer.spec
+    # DÜZELTME: buildozer.spec yeniden oluşturma yerine mevcut olanı kullan
+    - name: Verify Assets
       run: |
-        echo '[app]' > buildozer.spec
-        echo 'title = Lut Orifice Flow Calc' >> buildozer.spec
-        echo 'package.name = lut_orifice_flow_calc' >> buildozer.spec
-        echo 'package.domain = org.lutfi' >> buildozer.spec
-        echo 'source.dir = .' >> buildozer.spec
-        echo 'source.include_exts = py,json,txt,png,jpg' >> buildozer.spec
-        echo 'version = 1.0' >> buildozer.spec
-        echo 'requirements = python3,kivy==2.2.1' >> buildozer.spec
-        echo 'orientation = portrait' >> buildozer.spec
-        echo 'android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE' >> buildozer.spec
-        echo 'android.api = 33' >> buildozer.spec
-        echo 'android.minapi = 21' >> buildozer.spec
-        echo 'android.ndk = 25b' >> buildozer.spec
-        echo 'android.archs = arm64-v8a,armeabi-v7a' >> buildozer.spec
-        echo 'android.accept_sdk_license = True' >> buildozer.spec
-        echo 'log_level = 2' >> buildozer.spec
-        echo 'icon.filename = %(source.dir)s/icon.png' >> buildozer.spec
+        echo "Checking icon and splash..."
+        if [ -f "icon.png" ]; then
+          echo "✅ icon.png found"
+          ls -lh icon.png
+        else
+          echo "❌ icon.png NOT found"
+        fi
+        
+        if [ -f "splash.png" ]; then
+          echo "✅ splash.png found"
+          ls -lh splash.png
+        else
+          echo "❌ splash.png NOT found"
+        fi
+        
+        echo "Current buildozer.spec:"
+        cat buildozer.spec
 
     - name: Build APK
       run: |
@@ -68,7 +69,7 @@ jobs:
         # Gradle için Java 17 kullanılacağını ortam değişkeniyle de ayarla
         export JAVA_HOME=$JAVA_HOME_17_X64
         
-        # Build et
+        # Build et (buildozer.spec'i OLUŞTURMA, mevcut olanı kullan)
         buildozer android debug 2>&1 | tee build.log
         
         # Sonucu kontrol et
